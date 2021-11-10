@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Optional
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,8 +18,13 @@ def make_service():
 
 
 @pytest.fixture
+def auth():
+    return (uuid4().hex, "")
+
+
+@pytest.fixture
 def make_client(make_service):
-    def make(service: Optional[StockService] = None) -> TestClient:
+    def make(service: StockService = None):
         app = api.create(service=service or make_service())
         return TestClient(app)
 
@@ -40,12 +45,28 @@ def serialize_stock_price(stock_price: StockPrice):
 
 
 def describe_get_portfolio():
-    def returns_portfolio_of_user(make_client, make_service):
+    def returns_unauthorized_if_no_credentials_are_submitted(make_client):
+        response = make_client().get("/tickers")
+        assert 401 == response.status_code
+
+    def returns_unauthorized_if_username_is_not_uuid4(make_client, auth):
+        username = "invalid"
+        password = auth[1]
+        response = make_client().get("/tickers", auth=(username, password))
+        assert 401 == response.status_code
+
+    def returns_unauthorized_if_password_is_not_empty(make_client, auth):
+        username = auth[0]
+        password = "invalid"
+        response = make_client().get("/tickers", auth=(username, password))
+        assert 401 == response.status_code
+
+    def returns_portfolio_of_user(make_client, make_service, auth):
         service = make_service()
         expected_response_body = [
             serialize_stock_price(stock_price)
             for stock_price in service.get_portfolio()
         ]
-        response = make_client(service=service).get("/tickers")
+        response = make_client(service=service).get("/tickers", auth=auth)
         assert 200 == response.status_code
         assert expected_response_body == response.json()
