@@ -45,7 +45,9 @@ def create(service: StockService) -> FastAPI:
         return Healthcheck(ok=True)
 
     @api.get("/tickers")
-    def get_portfolio(username: str = Depends(get_username)) -> List[StockPrice]:
-        return service.get_portfolio()
+    def get_portfolio_current_prices(
+        username: str = Depends(get_username),
+    ) -> List[StockPrice]:
+        return service.get_portfolio_current_prices(username=username)
 
     return api

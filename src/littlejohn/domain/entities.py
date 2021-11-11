@@ -2,9 +2,11 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+StockSymbol = str
+
 
 class StockPrice(BaseModel):
-    symbol: str
+    symbol: StockSymbol
     price: Decimal
 
     class Config:
