@@ -64,7 +64,7 @@ def create(service: StockService) -> FastAPI:
         if isinstance(result, SymbolNotFound):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=result,
+                detail=result.dict(),
             )
         return result
 
