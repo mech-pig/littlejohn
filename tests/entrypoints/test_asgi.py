@@ -21,6 +21,9 @@ def today():
     return datetime.datetime.now(tz=datetime.timezone.utc).date()
 
 
+ALLOWED_STOCK_SYMBOLS = [f"TEST-{n}" for n in range(23)]
+
+
 @pytest.fixture
 def make_service(today):
     def make(
@@ -38,6 +41,7 @@ def make_service(today):
                 else {}
             ),
             get_today_utc=lambda: today,
+            allowed_stock_symbols=set(ALLOWED_STOCK_SYMBOLS),
         )
 
     return make
@@ -101,9 +105,18 @@ def describe_get_portfolio_current_prices():
     @pytest.mark.parametrize(
         "portfolio",
         [
-            pytest.param(["test1", "test2"], id="multiple stocks"),
-            pytest.param([], id="no stocks"),
-            pytest.param(["test"], id="single stock"),
+            pytest.param(
+                random.sample(ALLOWED_STOCK_SYMBOLS, k=2),
+                id="multiple stocks",
+            ),
+            pytest.param(
+                [],
+                id="no stocks",
+            ),
+            pytest.param(
+                random.sample(ALLOWED_STOCK_SYMBOLS, k=1),
+                id="single stock",
+            ),
         ],
     )
     def returns_stocks_in_user_portfolio(
@@ -118,7 +131,7 @@ def describe_get_portfolio_current_prices():
         portfolio_repository = PortfolioRepositoryDeterministicGenerator(
             portfolios={
                 username: portfolio,
-                "other-user": ["other1", "other2", "other3"],
+                "other-user": random.sample(ALLOWED_STOCK_SYMBOLS, k=2),
             },
         )
         service = make_service(portfolio_repository=portfolio_repository)
@@ -129,17 +142,20 @@ def describe_get_portfolio_current_prices():
 
 def describe_get_historical_prices():
     def returns_unauthorized_if_no_credentials_are_submitted(make_client):
-        response = make_client().get("/tickers/TEST/history")
+        symbol = random.choice(ALLOWED_STOCK_SYMBOLS)
+        response = make_client().get(f"/tickers/{symbol}/history")
         assert 401 == response.status_code
 
     def returns_unauthorized_if_username_is_not_uuid4(make_client, make_auth):
         auth = make_auth(username="invalid")
-        response = make_client().get("/tickers/TEST/history", auth=auth)
+        symbol = random.choice(ALLOWED_STOCK_SYMBOLS)
+        response = make_client().get(f"/tickers/{symbol}/history", auth=auth)
         assert 401 == response.status_code
 
     def returns_unauthorized_if_password_is_not_empty(make_client, make_auth):
         auth = make_auth(password="invalid")
-        response = make_client().get("/tickers/TEST/history", auth=auth)
+        symbol = random.choice(ALLOWED_STOCK_SYMBOLS)
+        response = make_client().get(f"/tickers/{symbol}/history", auth=auth)
         assert 401 == response.status_code
 
     def returns_historical_prices_of_requested_symbol(
@@ -149,7 +165,10 @@ def describe_get_historical_prices():
         today,
     ):
         date_range = [today - datetime.timedelta(days=d) for d in range(180)]
-        expected_symbol = "expected"
+        expected_symbol, *other_symbols = random.sample(
+            ALLOWED_STOCK_SYMBOLS,
+            k=len(ALLOWED_STOCK_SYMBOLS),
+        )
         expected_symbol_history = [
             PriceAtDate(date=date, price=Decimal(random.randint(10, 150)))
             for date in date_range
@@ -161,8 +180,7 @@ def describe_get_historical_prices():
         historical_prices = {
             date: {
                 **{
-                    symbol: Decimal(random.randint(10, 150))
-                    for symbol in [f"other-{n}" for n in range(5)]
+                    symbol: Decimal(random.randint(10, 150)) for symbol in other_symbols
                 },
                 expected_symbol: (
                     [p.price for p in expected_symbol_history if p.date == date][0]
@@ -177,3 +195,15 @@ def describe_get_historical_prices():
         )
         assert 200 == response.status_code
         assert expected_reponse == response.json()
+
+    def returns_not_found_if_requested_symbol_is_not_among_allowed_ones(
+        make_client,
+        make_auth,
+    ):
+        invalid_symbol = "invalid"
+        assert invalid_symbol not in ALLOWED_STOCK_SYMBOLS
+        response = make_client().get(
+            f"/tickers/{invalid_symbol}/history",
+            auth=make_auth(),
+        )
+        assert 404 == response.status_code
