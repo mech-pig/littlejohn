@@ -6,7 +6,12 @@ import pydantic
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from littlejohn.domain.entities import StockPrice
+from littlejohn.domain.entities import (
+    PriceAtDate,
+    StockPrice,
+    StockSymbol,
+    SymbolNotFound,
+)
 from littlejohn.domain.service import StockService
 
 logger = logging.getLogger(__name__)
@@ -49,5 +54,18 @@ def create(service: StockService) -> FastAPI:
         username: str = Depends(get_username),
     ) -> List[StockPrice]:
         return service.get_portfolio_current_prices(username=username)
+
+    @api.get("/tickers/{symbol}/history")
+    def get_historical_prices(
+        symbol: StockSymbol,
+        _: str = Depends(get_username),
+    ) -> List[PriceAtDate]:
+        result = service.get_historical_prices(symbol=symbol)
+        if isinstance(result, SymbolNotFound):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result,
+            )
+        return result
 
     return api
