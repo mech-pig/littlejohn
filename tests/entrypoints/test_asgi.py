@@ -119,14 +119,34 @@ def describe_get_portfolio_current_prices():
             ),
         ],
     )
-    def returns_stocks_in_user_portfolio(
+    def returns_current_price_of_stocks_in_user_portfolio(
         portfolio,
         make_client,
         make_service,
         make_auth,
+        today,
     ):
         auth = make_auth()
         username = auth[0]
+        date_range = [today - datetime.timedelta(days=d) for d in range(180)]
+
+        historical_prices = {
+            date: {
+                symbol: Decimal(random.randint(10, 150))
+                for symbol in ALLOWED_STOCK_SYMBOLS
+            }
+            for date in random.sample(date_range, len(date_range))
+        }
+
+        portfolio_current_prices = [
+            StockPrice(symbol=symbol, price=price)
+            for symbol, price in historical_prices[today].items()
+            if symbol in portfolio
+        ]
+        expected_reponse = [
+            serialize_stock_price(p)
+            for p in sorted(portfolio_current_prices, key=lambda p: p.symbol)
+        ]
 
         portfolio_repository = PortfolioRepositoryDeterministicGenerator(
             portfolios={
@@ -134,10 +154,13 @@ def describe_get_portfolio_current_prices():
                 "other-user": random.sample(ALLOWED_STOCK_SYMBOLS, k=2),
             },
         )
-        service = make_service(portfolio_repository=portfolio_repository)
+        service = make_service(
+            portfolio_repository=portfolio_repository,
+            historical_prices=historical_prices,
+        )
         response = make_client(service=service).get("/tickers", auth=auth)
         assert 200 == response.status_code
-        assert portfolio == [data["symbol"] for data in response.json()]
+        assert expected_reponse == sorted(response.json(), key=lambda d: d["symbol"])
 
 
 def describe_get_historical_prices():

@@ -1,6 +1,5 @@
 import datetime
 import logging
-from decimal import Decimal
 from typing import Callable, List, Protocol, Set, Union
 
 from .entities import (
@@ -46,13 +45,19 @@ class StockService:
         self.allowed_stock_symbols = allowed_stock_symbols
 
     def get_portfolio_current_prices(self, username: str) -> List[StockPrice]:
+        today = self.get_today_utc()
         logger.info(f"Returning portfolio of user {username}")
         portfolio = self.portfolio_repository.get_user_portfolio(username=username)
+
+        logger.info(f"Retrieving stock prices of {today}")
+        current_prices = self.stock_price_service.get_history(
+            symbols=portfolio,
+            start_from=today,
+            days_in_the_past=1,
+        )[today]
+
         return [
-            StockPrice(
-                symbol=symbol,
-                price=Decimal(150.57),
-            )
+            StockPrice(symbol=symbol, price=current_prices[symbol])
             for symbol in portfolio
         ]
 

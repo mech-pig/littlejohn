@@ -14,6 +14,8 @@ from . import api
 
 
 def create_app() -> FastAPI:
+    random.seed(123)
+
     allowed_stock_symbols = {
         "AAPL",
         "MSFT",
