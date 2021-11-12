@@ -23,7 +23,7 @@ class StockPriceService(Protocol):
         self,
         symbols: List[StockSymbol],
         start_from: datetime.date,
-        days_in_the_past: int,
+        length: int,
     ) -> HistoricalPrices:
         ...
 
@@ -50,11 +50,12 @@ class StockService:
         portfolio = self.portfolio_repository.get_user_portfolio(username=username)
 
         logger.info(f"Retrieving stock prices of {today}")
-        current_prices = self.stock_price_service.get_history(
+        price_history = self.stock_price_service.get_history(
             symbols=portfolio,
             start_from=today,
-            days_in_the_past=1,
-        )[today]
+            length=1,
+        )
+        current_prices = price_history[today]
 
         return [
             StockPrice(symbol=symbol, price=current_prices[symbol])
@@ -70,16 +71,16 @@ class StockService:
             return SymbolNotFound(symbol=symbol)
 
         start_from = self.get_today_utc()
-        period_in_days = 90
+        history_length_in_days = 90
         logger.info(
             "Get historical prices",
-            f" for the last {period_in_days}",
+            f" for the last {history_length_in_days}",
             f" starting from {start_from}",
         )
         price_history = self.stock_price_service.get_history(
             symbols=[symbol],
             start_from=start_from,
-            days_in_the_past=period_in_days,
+            length=history_length_in_days,
         )
         return [
             PriceAtDate(price=price_history[date][symbol], date=date)

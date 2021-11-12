@@ -1,7 +1,7 @@
 import datetime
 import random
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 from uuid import uuid4
 
 import pytest
@@ -10,9 +10,17 @@ from fastapi.testclient import TestClient
 from littlejohn.adapters.portfolio_repository import (
     PortfolioRepositoryDeterministicGenerator,
 )
-from littlejohn.adapters.stock_price_service import StockPriceServiceStub
-from littlejohn.domain.entities import HistoricalPrices, PriceAtDate, StockPrice
-from littlejohn.domain.service import PortfolioRepository, StockService
+from littlejohn.domain.entities import (
+    HistoricalPrices,
+    PriceAtDate,
+    StockPrice,
+    StockSymbol,
+)
+from littlejohn.domain.service import (
+    PortfolioRepository,
+    StockPriceService,
+    StockService,
+)
 from littlejohn.entrypoints.asgi import api
 
 
@@ -22,6 +30,23 @@ def today():
 
 
 ALLOWED_STOCK_SYMBOLS = [f"TEST-{n}" for n in range(23)]
+
+
+class StockPriceServiceStub(StockPriceService):
+    def __init__(self, historical_prices: HistoricalPrices):
+        self.historical_prices = historical_prices
+
+    def get_history(
+        self,
+        symbols: List[StockSymbol],
+        start_from: datetime.date,
+        length: int,
+    ) -> HistoricalPrices:
+        dates = (start_from - datetime.timedelta(days=d) for d in range(length))
+        return {
+            date: {symbol: self.historical_prices[date][symbol] for symbol in symbols}
+            for date in dates
+        }
 
 
 @pytest.fixture
