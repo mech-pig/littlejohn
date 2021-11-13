@@ -120,16 +120,19 @@ def describe_get_portfolio_current_prices():
     def returns_unauthorized_if_no_credentials_are_submitted(make_client):
         response = make_client().get("/tickers")
         assert 401 == response.status_code
+        assert "Not authenticated" == response.json()["detail"]
 
     def returns_unauthorized_if_username_is_not_uuid4(make_client, make_auth):
         auth = make_auth(username="invalid")
         response = make_client().get("/tickers", auth=auth)
         assert 401 == response.status_code
+        assert "Incorrect username or password" == response.json()["detail"]
 
     def returns_unauthorized_if_password_is_not_empty(make_client, make_auth):
         auth = make_auth(password="invalid")
         response = make_client().get("/tickers", auth=auth)
         assert 401 == response.status_code
+        assert "Incorrect username or password" == response.json()["detail"]
 
     @pytest.mark.parametrize(
         "portfolio",
@@ -197,18 +200,21 @@ def describe_get_historical_prices():
         symbol = random.choice(ALLOWED_STOCK_SYMBOLS)
         response = make_client().get(f"/tickers/{symbol}/history")
         assert 401 == response.status_code
+        assert "Not authenticated" == response.json()["detail"]
 
     def returns_unauthorized_if_username_is_not_uuid4(make_client, make_auth):
         auth = make_auth(username="invalid")
         symbol = random.choice(ALLOWED_STOCK_SYMBOLS)
         response = make_client().get(f"/tickers/{symbol}/history", auth=auth)
         assert 401 == response.status_code
+        assert "Incorrect username or password" == response.json()["detail"]
 
     def returns_unauthorized_if_password_is_not_empty(make_client, make_auth):
         auth = make_auth(password="invalid")
         symbol = random.choice(ALLOWED_STOCK_SYMBOLS)
         response = make_client().get(f"/tickers/{symbol}/history", auth=auth)
         assert 401 == response.status_code
+        assert "Incorrect username or password" == response.json()["detail"]
 
     def returns_historical_prices_of_requested_symbol(
         make_client,

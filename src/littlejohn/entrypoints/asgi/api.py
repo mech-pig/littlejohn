@@ -29,7 +29,7 @@ def create(service: StockService) -> FastAPI:
     def get_username(credentials: HTTPBasicCredentials = Depends(auth)) -> str:
         unauthorized = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Basic"},
         )
 
