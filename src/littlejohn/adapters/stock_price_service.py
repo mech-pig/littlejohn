@@ -4,6 +4,7 @@ from typing import Generator, List, TypedDict
 
 from littlejohn.domain.entities import HistoricalPrices, StockSymbol
 from littlejohn.domain.service import StockPriceService
+from littlejohn.libs.random import xorshift_32_rand
 
 __all__ = [
     "StockPriceServiceRandomWalker",
@@ -26,17 +27,6 @@ def determine_iterations(
         "forward": (start_date - zero_date).days if start_date > zero_date else 0,
         "backward": (zero_date - end_date).days if end_date < zero_date else 0,
     }
-
-
-def xorshift_32_rand(seed: int) -> Generator[float, None, None]:
-    current_seed = seed
-    max_value = 2 ** 32
-    while True:
-        current_seed ^= current_seed << 13
-        current_seed ^= current_seed >> 17
-        current_seed ^= current_seed << 5
-        current_seed %= max_value
-        yield current_seed / max_value
 
 
 def random_walk(

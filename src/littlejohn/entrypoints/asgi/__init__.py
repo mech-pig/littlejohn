@@ -4,9 +4,7 @@ from decimal import Decimal
 
 from fastapi import FastAPI
 
-from littlejohn.adapters.portfolio_repository import (
-    PortfolioRepositoryDeterministicGenerator,
-)
+from littlejohn.adapters.portfolio_repository import PortfolioRepositoryGenerator
 from littlejohn.adapters.stock_price_service import StockPriceServiceRandomWalker
 from littlejohn.domain.service import StockService
 
@@ -37,10 +35,10 @@ def create_app() -> FastAPI:
         "CRM",
         "NFLX",
     }
-    portfolio_repository = PortfolioRepositoryDeterministicGenerator(
-        portfolios={
-            "416076429e6f437c8b7dcdbc18d608ac": list(allowed_stock_symbols),
-        }
+    portfolio_repository = PortfolioRepositoryGenerator(
+        stocks=allowed_stock_symbols,
+        min_stocks_in_portfolio=1,
+        max_stocks_in_portfolio=10,
     )
     stock_price_service = StockPriceServiceRandomWalker(
         zero_date=date(2021, 11, 12),
