@@ -1,3 +1,18 @@
+## Run with docker
+
+The easiest way to run `LittleJohn` is via docker.
+Build the image with
+
+```sh
+docker build -t littlejohn .
+```
+
+and then start the server
+
+```sh
+docker run -p 8080:8080 littlejohn
+```
+
 ## Local development
 
 ### Dependencies
