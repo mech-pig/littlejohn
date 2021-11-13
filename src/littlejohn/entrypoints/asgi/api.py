@@ -1,14 +1,16 @@
+import base64
 import logging
 import uuid
-from typing import List
+from typing import List, Optional
 
 import pydantic
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from littlejohn.domain.entities import (
     PriceAtDate,
     StockPrice,
+    StockPriceHistoryCursor,
     StockSymbol,
     SymbolNotFound,
 )
@@ -57,15 +59,40 @@ def create(service: StockService) -> FastAPI:
 
     @api.get("/tickers/{symbol}/history")
     def get_historical_prices(
+        response: Response,
         symbol: StockSymbol,
+        cursor: Optional[str] = None,
         _: str = Depends(get_username),
     ) -> List[PriceAtDate]:
-        result = service.get_historical_prices(symbol=symbol)
+        decoded_cursor: Optional[StockPriceHistoryCursor]
+        if cursor is not None:
+            try:
+                decoded_cursor = StockPriceHistoryCursor.parse_raw(
+                    base64.urlsafe_b64decode(cursor)
+                )
+            except Exception:
+                logger.info("Cursor parsing failed")
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Invalid cursor",
+                )
+        else:
+            decoded_cursor = None
+
+        result = service.get_historical_prices(symbol=symbol, cursor=decoded_cursor)
         if isinstance(result, SymbolNotFound):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=result.dict(),
             )
-        return result
+
+        if result.next is not None:
+            next_cursor = base64.urlsafe_b64encode(
+                result.next.json().encode("utf-8")
+            ).decode("utf-8")
+            next_href = f"/tickers/{symbol}/history?cursor={next_cursor}"
+            response.headers["Link"] = f'{next_href}; rel="next"'
+
+        return result.data
 
     return api

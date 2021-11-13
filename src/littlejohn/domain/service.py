@@ -1,11 +1,13 @@
 import datetime
 import logging
-from typing import Callable, List, Protocol, Set, Union
+from typing import Callable, List, Optional, Protocol, Set, Union
 
 from .entities import (
     HistoricalPrices,
     PriceAtDate,
     StockPrice,
+    StockPriceHistory,
+    StockPriceHistoryCursor,
     StockSymbol,
     SymbolNotFound,
 )
@@ -65,13 +67,18 @@ class StockService:
     def get_historical_prices(
         self,
         symbol: StockSymbol,
-    ) -> Union[List[PriceAtDate], SymbolNotFound]:
+        cursor: Optional[StockPriceHistoryCursor] = None,
+    ) -> Union[StockPriceHistory, SymbolNotFound]:
         if symbol not in self.allowed_stock_symbols:
             logger.info(f"Symbol not found: {symbol}")
             return SymbolNotFound(symbol=symbol)
 
-        start_from = self.get_today_utc()
         history_length_in_days = 90
+        start_from = cursor.start_from if cursor is not None else self.get_today_utc()
+        next_cursor = StockPriceHistoryCursor(
+            start_from=start_from - datetime.timedelta(days=history_length_in_days)
+        )
+
         logger.info(
             "Get historical prices",
             f" for the last {history_length_in_days}",
@@ -82,7 +89,9 @@ class StockService:
             start_from=start_from,
             length=history_length_in_days,
         )
-        return [
+        data = [
             PriceAtDate(price=price_history[date][symbol], date=date)
             for date in sorted(price_history.keys(), reverse=True)
         ]
+
+        return StockPriceHistory(data=data, next=next_cursor)

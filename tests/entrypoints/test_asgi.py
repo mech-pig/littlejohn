@@ -254,6 +254,52 @@ def describe_get_historical_prices():
         assert 200 == response.status_code
         assert expected_reponse == response.json()
 
+    def supports_forward_pagination(
+        make_client,
+        make_service,
+        make_auth,
+        today,
+    ):
+        date_range = [today - datetime.timedelta(days=d) for d in range(180)]
+        expected_symbol = random.choice(ALLOWED_STOCK_SYMBOLS)
+        expected_symbol_history = [
+            PriceAtDate(date=date, price=Decimal(random.randint(10, 150)))
+            for date in date_range
+        ]
+        expected_reponse = [
+            serialize_price_at_date(d) for d in expected_symbol_history[90:]
+        ]
+
+        historical_prices = {
+            date: {
+                expected_symbol: (
+                    [p.price for p in expected_symbol_history if p.date == date][0]
+                ),
+            }
+            for date in random.sample(date_range, len(date_range))
+        }
+        service = make_service(historical_prices=historical_prices)
+        response = make_client(service=service).get(
+            f"/tickers/{expected_symbol}/history",
+            auth=make_auth(),
+        )
+        assert 200 == response.status_code
+
+        # follow pagination link
+        next_url = response.links["next"]["url"]
+        response = make_client(service=service).get(next_url, auth=make_auth())
+        assert 200 == response.status_code
+        assert expected_reponse == response.json()
+
+    def returns_validation_error_if_cursor_is_malformed(make_client, make_auth):
+        symbol = random.choice(ALLOWED_STOCK_SYMBOLS)
+        response = make_client().get(
+            f"/tickers/{symbol}/history?cursor=malformed",
+            auth=make_auth(),
+        )
+        assert 422 == response.status_code
+        assert "Invalid cursor" == response.json()["detail"]
+
     def returns_not_found_if_requested_symbol_is_not_among_allowed_ones(
         make_client,
         make_auth,
