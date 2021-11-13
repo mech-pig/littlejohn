@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "littlejohn"
-version = "0.0.0"
+version = "0.1.0"
 description = ""
 authors = ["mechpig <7295856+mech-pig@users.noreply.github.com>"]
 
