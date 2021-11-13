@@ -1,6 +1,6 @@
 import datetime
 from decimal import Decimal
-from typing import Mapping
+from typing import List, Mapping, Optional
 
 from pydantic import BaseModel
 
@@ -39,3 +39,12 @@ class PriceAtDate(BaseModel):
 
 
 HistoricalPrices = Mapping[datetime.date, Mapping[StockSymbol, Decimal]]
+
+
+class StockPriceHistoryCursor(BaseModel):
+    start_from: datetime.date
+
+
+class StockPriceHistory(BaseModel):
+    data: List[PriceAtDate]
+    next: Optional[StockPriceHistoryCursor]
