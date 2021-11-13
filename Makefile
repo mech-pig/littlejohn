@@ -1,6 +1,8 @@
 ENV_VARS = \
 	HTTP_PORT=8080
 
+PYTEST_ARGS = src tests
+
 .PHONY: dev
 dev:
 	$(ENV_VARS) poetry run gunicorn --reload "littlejohn.entrypoints.asgi:create_app()"
@@ -30,4 +32,4 @@ fmt:
 
 .PHONY: test
 test:
-	poetry run pytest src tests
+	poetry run pytest $(PYTEST_ARGS)

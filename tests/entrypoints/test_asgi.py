@@ -1,15 +1,12 @@
 import datetime
 import random
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Mapping, Optional
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
-from littlejohn.adapters.portfolio_repository import (
-    PortfolioRepositoryDeterministicGenerator,
-)
 from littlejohn.domain.entities import (
     HistoricalPrices,
     PriceAtDate,
@@ -49,6 +46,14 @@ class StockPriceServiceStub(StockPriceService):
         }
 
 
+class PortfolioRepositoryStub(PortfolioRepository):
+    def __init__(self, portfolios: Mapping[str, List[StockSymbol]]):
+        self.portfolios = portfolios
+
+    def get_user_portfolio(self, username: str) -> List[StockSymbol]:
+        return self.portfolios.get(username, [])
+
+
 @pytest.fixture
 def make_service(today):
     def make(
@@ -57,8 +62,7 @@ def make_service(today):
     ) -> StockService:
         return StockService(
             portfolio_repository=(
-                portfolio_repository
-                or PortfolioRepositoryDeterministicGenerator(portfolios={})
+                portfolio_repository or PortfolioRepositoryStub(portfolios={})
             ),
             stock_price_service=StockPriceServiceStub(
                 historical_prices=historical_prices
@@ -173,7 +177,7 @@ def describe_get_portfolio_current_prices():
             for p in sorted(portfolio_current_prices, key=lambda p: p.symbol)
         ]
 
-        portfolio_repository = PortfolioRepositoryDeterministicGenerator(
+        portfolio_repository = PortfolioRepositoryStub(
             portfolios={
                 username: portfolio,
                 "other-user": random.sample(ALLOWED_STOCK_SYMBOLS, k=2),
