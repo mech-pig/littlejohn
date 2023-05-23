@@ -23,7 +23,7 @@ pytest-cov = "^3.0.0"
 pytest-describe = "^2.0.0"
 pytest-mock = "^3.6.1"
 pytest-randomly = "^3.10.1"
-requests = "^2.26.0"
+requests = "^2.31.0"
 
 [tool.black]
 line-length = 88
